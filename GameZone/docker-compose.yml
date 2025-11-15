@@ -1,0 +1,38 @@
+version: "3.8"
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "password123YourStrong!Passw0rd"
+    ports:
+      - "1433:1433"
+    volumes: 
+      - sql_data:/var/opt/mssql
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -U sa -P $$SA_PASSWORD -Q 'SELECT 1' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  webapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcvapp
+    ports:
+      - "8080:80" 
+    depends_on: 
+      - sqlserver
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=GameZone;User=sa;Password=password123
+    networks:
+      - app-network
+volumes:
+  sql_data:
+
+networks:
+  app-network:
+    driver: bridge

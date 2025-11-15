@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 var DefaultConnections = builder.Configuration.GetConnectionString("DefaultConnection");
-
+//builder.WebHost.UseUrls("http://0.0.0.0:80");
 builder.Services.AddDbContext<ApplicationDBContext>(options => options.UseSqlServer(DefaultConnections));
 // Add services to the container.
 builder.Services.AddControllersWithViews();
