@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 var DefaultConnections = builder.Configuration.GetConnectionString("DefaultConnection");
-//builder.WebHost.UseUrls("http://0.0.0.0:80");
+ 
 builder.Services.AddDbContext<ApplicationDBContext>(options => options.UseSqlServer(DefaultConnections));
 // Add services to the container.
 builder.Services.AddControllersWithViews();
@@ -20,6 +20,15 @@ builder.Services.AddScoped<IGame, GamesRepo>();
 builder.Services.AddScoped<IUploadFile, UploadFileService>();
 
 var app = builder.Build();
+
+
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDBContext>();
+    db.Database.Migrate(); // This applies any pending migrations
+}
+
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

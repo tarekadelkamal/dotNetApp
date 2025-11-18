@@ -5,7 +5,7 @@ services:
     container_name: sqlserver
     environment:
       ACCEPT_EULA: "Y"
-      SA_PASSWORD: "password123YourStrong!Passw0rd"
+      SA_PASSWORD: "P@ssw0rd123!"
     ports:
       - "1433:1433"
     volumes: 
@@ -17,19 +17,22 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+
   webapp:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: mcvapp
+    container_name: mcvdotnetapp
     ports:
-      - "8080:80" 
+      - "8000:80" 
     depends_on: 
       - sqlserver
     environment:
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=GameZone;User=sa;Password=password123
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=GameZone;User=sa;Password=P@ssw0rd123!;TrustServerCertificate=True
     networks:
       - app-network
+
+
 volumes:
   sql_data:
 

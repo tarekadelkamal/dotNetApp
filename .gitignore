@@ -1,0 +1,26 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.cache
+*.dbmdl
+
+# Build results
+bin/
+obj/
+Debug/
+Release/
+
+# Static assets
+staticwebassets/
+
+# NuGet
+*.nupkg
+project.lock.json
+project.assets.json
+
+# Logs
+*.log
+
+# Docker build artifacts
+*.pid
