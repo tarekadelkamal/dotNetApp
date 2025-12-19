@@ -26,7 +26,26 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDBContext>();
-    db.Database.Migrate(); // This applies any pending migrations
+
+    const int maxRetries = 10;
+    var delay = TimeSpan.FromSeconds(5);
+
+    for (int retry = 1; retry <= maxRetries; retry++)
+    {
+        try
+        {
+            db.Database.Migrate();
+            break;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Retry {retry}: SQL not ready yet...");
+            if (retry == maxRetries)
+                throw;
+
+            Thread.Sleep(delay);
+        }
+    }
 }
 
 
