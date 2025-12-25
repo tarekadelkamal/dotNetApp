@@ -28,12 +28,12 @@ namespace GameZone.EntitiesConfiguration
         {
             return new List<Game>
             {
-                new Game{Id = 1, Name = "FIFA 2024", Description = "FootBall Game", CategoryId = 1, Cover = "0b7d417b-a940-42de-8082-943fa90a33c4.jpg"},
-                new Game{Id = 2, Name = "Pease 2024", Description = "FootBall Game", CategoryId = 2, Cover ="19fa8dd2-8b82-4782-b3c8-690990e9f655.jpg"},
-                new Game{Id = 3, Name = "IGI", Description = "IGI Ware Game", CategoryId = 3, Cover = "a12bb8d4-2da0-4aa2-a45e-2d7fab94e805.jpg"},
-                new Game{Id = 4, Name = "Pubgi", Description = "Pubgi its Ware Game", CategoryId = 2, Cover = "a12bb8d4-2da0-4aa2-a45e-2d7fab94e805.jpg"},
-                new Game{Id = 5, Name = "GTA", Description = "GTA Car Game", CategoryId = 3, Cover = "a12bb8d4-2da0-4aa2-a45e-2d7fab94e805.jpg"},
-                new Game{Id = 6, Name = "Midetown", Description = "Midetown Car Game", CategoryId = 1, Cover = "35c30395-9213-4105-810e-678ab24dfd8c.jpg"},
+                new Game{Id = 1, Name = "Shadow Strike", Description = "Elite tactical warfare game featuring stealth missions and special forces operations", CategoryId = 1, Cover = "shadow_strike.jpg"},
+                new Game{Id = 2, Name = "Battle Nexus", Description = "Futuristic sci-fi shooter with advanced weaponry and intense multiplayer battles", CategoryId = 1, Cover = "battle_nexus.jpg"},
+                new Game{Id = 3, Name = "Champions League Ultimate", Description = "Professional football simulation with realistic gameplay and championship tournaments", CategoryId = 2, Cover = "champions_league.jpg"},
+                new Game{Id = 4, Name = "Street Soccer Pro", Description = "Urban street football with freestyle tricks and fast-paced arcade action", CategoryId = 2, Cover = "street_soccer.jpg"},
+                new Game{Id = 5, Name = "Velocity Rush", Description = "High-speed street racing through neon-lit cities with exotic supercars", CategoryId = 3, Cover = "velocity_rush.jpg"},
+                new Game{Id = 6, Name = "Off-Road Legends", Description = "Extreme off-road racing adventure across challenging desert and mountain terrains", CategoryId = 3, Cover = "off_road_legends.jpg"},
             };
         }
     }
