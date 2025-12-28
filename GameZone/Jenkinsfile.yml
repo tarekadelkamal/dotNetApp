@@ -1,0 +1,32 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('checkout'){
+            steps{
+                 git branch: 'main', url: 'https://github.com/tarekadelkamal/dotNetApp.git'
+            }
+        }
+        stage('build & push') {
+            steps {
+                dir('GameZone') {
+                   withCredentials([usernamePassword(credentialsId: 'dockerhub', passwordVariable: 'pass', usernameVariable: 'user')]) 
+                    {
+                         sh "docker login -u $user -p $pass"
+                         sh "cd /var/jenkins_home/workspace/dotnetapp/Gamezone"
+                         sh "docker compose build webapp"
+                         sh "docker tag gamezone-webapp:latest tarek2020/dotnetapp:${env.BUILD_NUMBER}"
+                         sh "docker push tarek2020/dotnetapp:${env.BUILD_NUMBER}"
+                    } 
+                }
+            }
+        }
+        stage('deploy'){
+            steps {
+               dir('GameZone') { 
+                   sh "docker compose up -d"
+               }
+            }
+        }
+    }
+}
