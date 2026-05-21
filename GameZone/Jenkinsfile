@@ -21,14 +21,39 @@ pipeline {
                 }
             }
         }
-        stage('deploy'){
+        stage('deploy infrastructure') {
             steps {
                dir('GameZone') { 
-                   // Apply the Kubernetes configurations
-                   sh "kubectl apply -f k8s/"
+                   sh '''
+                   # Deploy Secret if it does not exist
+                   if ! kubectl get secret app-secrets > /dev/null 2>&1; then
+                       echo "Deploying Secret for the first time..."
+                       kubectl apply -f k8s/secret.yaml
+                   fi
                    
-                   // Update the webapp deployment with the new image tag
-                   sh "kubectl set image deployment/webapp mcvdotnetapp=tarek2020/dotnetapp:${env.BUILD_NUMBER}"
+                   # Deploy SQL Server database if it does not exist
+                   if ! kubectl get deployment sqlserver > /dev/null 2>&1; then
+                       echo "Deploying Database for the first time..."
+                       kubectl apply -f k8s/db-deployment.yaml
+                   fi
+                   
+                   # Deploy Ingress if it does not exist
+                   if ! kubectl get ingress webapp-ingress > /dev/null 2>&1; then
+                       echo "Deploying Ingress for the first time..."
+                       kubectl apply -f k8s/ingress.yaml
+                   fi
+                   '''
+               }
+            }
+        }
+        stage('deploy webapp'){
+            steps {
+               dir('GameZone') { 
+                   // Replace the 'latest' tag with the specific BUILD_NUMBER dynamically
+                   sh "sed -i 's|tarek2020/dotnetapp:latest|tarek2020/dotnetapp:${env.BUILD_NUMBER}|g' k8s/app-deployment.yaml"
+                   
+                   // Apply the web app deployment
+                   sh "kubectl apply -f k8s/app-deployment.yaml"
                }
             }
         }
