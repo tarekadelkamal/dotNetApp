@@ -24,7 +24,11 @@ pipeline {
         stage('deploy'){
             steps {
                dir('GameZone') { 
-                   sh "docker compose up -d"
+                   // Apply the Kubernetes configurations
+                   sh "kubectl apply -f k8s/"
+                   
+                   // Update the webapp deployment with the new image tag
+                   sh "kubectl set image deployment/webapp mcvdotnetapp=tarek2020/dotnetapp:${env.BUILD_NUMBER}"
                }
             }
         }
