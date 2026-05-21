@@ -35,6 +35,22 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: db-password
+        readinessProbe:
+          exec:
+            command:
+              - /bin/bash
+              - -c
+              - "/opt/mssql-tools18/bin/sqlcmd -C -U sa -P $SA_PASSWORD -Q 'SELECT 1' || exit 1"
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        livenessProbe:
+          exec:
+            command:
+              - /bin/bash
+              - -c
+              - "/opt/mssql-tools18/bin/sqlcmd -C -U sa -P $SA_PASSWORD -Q 'SELECT 1' || exit 1"
+          initialDelaySeconds: 30
+          periodSeconds: 15
         volumeMounts:
         - name: sql-data
           mountPath: /var/opt/mssql
