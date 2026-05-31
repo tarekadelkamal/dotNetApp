@@ -24,9 +24,9 @@ pipeline {
         stage('deploy infrastructure') {
             steps {
                dir('GameZone') { 
-                   sh 'kubectl get secret app-secrets > /dev/null 2>&1 || kubectl apply -f k8s/secret.yaml'
-                   sh 'kubectl get deployment sqlserver > /dev/null 2>&1 || kubectl apply -f k8s/db-deployment.yaml'
-                   sh 'kubectl get ingress webapp-ingress > /dev/null 2>&1 || kubectl apply -f k8s/ingress.yaml'
+                   sh 'kubectl apply -f k8s/secret.yaml'
+                   sh 'kubectl apply -f k8s/db-deployment.yaml'
+                   sh 'kubectl apply -f k8s/ingress.yaml'
                }
             }
         }
