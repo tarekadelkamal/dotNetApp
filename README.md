@@ -61,3 +61,36 @@ Start the development server:
 dotnet run
 ```
 The application will usually be accessible at `https://localhost:7111` or `http://localhost:5169` (check terminal output for exact ports).
+
+## CI/CD Pipeline (Jenkins to Kubernetes)
+
+This repository includes a Jenkins pipeline (`Jenkinsfile`) that automates building the Docker image and deploying the application to a Kubernetes cluster.
+
+### Prerequisites:
+- A running **Kubernetes** cluster.
+- **Jenkins** installed and configured to connect to your Kubernetes cluster.
+- **Docker Hub Credentials**: Configured in Jenkins with the ID `dockerhub`.
+
+### Pipeline Stages:
+The pipeline defined in `GameZone/Jenkinsfile` consists of the following stages:
+
+**1. Build & Push:**
+- Logs into Docker Hub using the `dockerhub` credentials.
+- Builds the application Docker image using `docker compose build webapp`.
+- Tags the built image dynamically using the Jenkins `BUILD_NUMBER` (e.g., `tarek2020/dotnetapp:12`).
+- Pushes the versioned image to Docker Hub.
+
+**2. Deploy Infrastructure:**
+- Applies foundational Kubernetes manifests located in the `k8s/` directory.
+- Deploys database secrets (`secret.yaml`).
+- Deploys the SQL Server instance (`db-deployment.yaml`).
+- Configures the routing rules (`ingress.yaml`).
+
+**3. Deploy Webapp:**
+- Dynamically updates the `k8s/app-deployment.yaml` manifest to point to the newly built image tag (`tarek2020/dotnetapp:${env.BUILD_NUMBER}`).
+- Applies the updated web application deployment manifest to the Kubernetes cluster to spin up the application pods.
+
+### How to Run:
+1. Create a new Jenkins Pipeline Job and point it to this GitHub repository.
+2. Ensure the `Jenkinsfile` path is correctly set.
+3. Trigger a **Build Now** from your Jenkins dashboard. The pipeline will automatically handle the build, containerization, and full deployment to Kubernetes.
