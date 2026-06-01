@@ -1,69 +1,63 @@
-# .NET Core CRUD Operation - Version 8 - README
+# GameZone - .NET Core 8 CRUD Application
 
-## Overview 
+## What is this App?
 
-This repository demonstrates the implementation of CRUD (Create, Read, Update, Delete) operations using .NET Core Version 8. It is designed to provide a clear and concise example of how to perform basic data management tasks in a .NET Core 8 application, leveraging the latest features and best practices introduced in this version.
+**GameZone** is a web application built using **.NET Core 8 MVC**. It demonstrates the implementation of CRUD (Create, Read, Update, Delete) operations using the latest features and best practices introduced in .NET Core 8. 
 
-## Features
+The application uses **Entity Framework Core** as its ORM (Object-Relational Mapper) to interact with a **SQL Server** database, providing a robust backend for managing game-related data.
 
-- **Create:** Add new records to the database using HTTP POST requests.
-- **Read:** Retrieve and display data from the database using HTTP GET requests.
-- **Update:** Modify existing records in the database using HTTP PUT or PATCH requests.
-- **Delete:** Remove records from the database using HTTP DELETE requests.
+## DevOps Tools
 
-## Technology Stack
+This project incorporates modern DevOps practices and tools to ensure seamless development, continuous integration, and deployment:
 
-- **.NET Core 8.0:** The latest version of the .NET Core framework, offering improved performance, security, and features.
-- **Entity Framework Core:** An object-relational mapper (ORM) that enables developers to work with a database using .NET objects.
-- **SQL Server:** The database management system used for storing and retrieving data.
-- **ASP.NET Core MVC:** A framework for building web applications and APIs using the Model-View-Controller design pattern.
+- **Docker:** Containerizes the application and database for consistent environments across development and production.
+- **Docker Compose:** Orchestrates multi-container setups locally (Application + SQL Server).
+- **Jenkins:** A fully automated CI/CD pipeline (`Jenkinsfile`) that handles building, pushing Docker images to Docker Hub, and deploying the application.
+- **Kubernetes (K8s):** Provides enterprise-grade container orchestration. Manifests for deployments, services, ingress, and secrets are included in the `k8s` directory for deploying the app to a Kubernetes cluster.
 
-## Sample Usage (Docker)
+## How to Run on a Local Device
 
-Quickly spin up the application and database using Docker Compose without installing the .NET SDK or SQL Server locally.
+You can run this application locally using either Docker (recommended) or the .NET Core SDK.
 
-**Step 1: Setup**
-Create a `.env` file in the `GameZone` directory (where `docker-compose.yml` resides) to set your database password. The password must meet SQL Server complexity requirements (e.g., `StrongPassword123!`).
+### Option 1: Using Docker Compose (Recommended)
+
+Quickly spin up the application and database without installing the .NET SDK or SQL Server locally.
+
+**1. Setup Environment Variables:**
+Create a `.env` file in the `GameZone` directory (where `docker-compose.yml` resides) and set a strong database password:
 ```text
 db_password=YourStrongPassword123!
 ```
-*Note: For local development, you must provide this file. In our Jenkins pipeline, this variable is injected automatically.*
 
-**Step 2: Run**
+**2. Build and Run:**
 Navigate to the `GameZone` directory and execute:
 ```bash
+cd GameZone
 docker-compose up --build
 ```
 
-**Step 3: Access**
+**3. Access the App:**
 Open your browser and navigate to: [http://localhost:8000](http://localhost:8000)
 
-## CI/CD Pipeline with Jenkins
+### Option 2: Using .NET Core SDK
 
-This project includes a fully automated `Jenkinsfile` for Continuous Integration and Deployment.
+**1. Prerequisites:**
+- Install [.NET Core SDK 8.0](https://dotnet.microsoft.com/download)
+- Install SQL Server (or SQL Server Express) locally.
 
-**Step 1: Prerequisites**
-- Jenkins installed with **Docker** and **Pipeline** plugins.
-- **Docker Hub Credentials**: Configure credentials with ID `dockerhub` in Jenkins.
-- **Global Environment Variable**: Go to *Manage Jenkins -> System -> Global properties* and add a variable named `db_password` with your desired SQL Server password.
+**2. Database Configuration:**
+Update the `appsettings.json` or `appsettings.Development.json` inside the `GameZone` directory with your local SQL Server connection string.
 
-**Step 2: Setup**
-Create a new "Pipeline" job in Jenkins and point it to this repository.
+**3. Apply Migrations:**
+Navigate to the `GameZone` directory and run EF Core migrations to create the database:
+```bash
+cd GameZone
+dotnet ef database update
+```
 
-**Step 3: Run**
-Trigger a build. The pipeline will automatically:
-1.  **Build & Push**: Build the Docker image and push it to Docker Hub.
-2.  **Deploy**: Deploy the application using `docker compose`.
-
-## Getting Started
-
-### Prerequisites
-
-- **.NET Core SDK 8.0:** Ensure that the .NET Core SDK version 8.0 is installed on your machine. You can download it from the [.NET Download](https://dotnet.microsoft.com/download) page.
-- **SQL Server:** Install SQL Server or use an existing instance. You may also use SQL Server Express or any other compatible database system.
-
-### Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/tarekadelkamal/Dot-Net-Core-8-CRUD-Operation.git
+**4. Run the Application:**
+Start the development server:
+```bash
+dotnet run
+```
+The application will usually be accessible at `https://localhost:7111` or `http://localhost:5169` (check terminal output for exact ports).
