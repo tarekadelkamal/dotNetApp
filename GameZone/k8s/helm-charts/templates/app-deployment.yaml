@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-{{ .Values.app.name }}
+  labels:
+    app: {{ .Values.app.name }}
+spec:
+  replicas: {{ .Values.app.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.app.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.app.name }}
+    spec:
+      initContainers:
+      - name: wait-for-sqlserver
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z {{ .Release.Name }}-{{ .Values.db.name }} {{ .Values.db.service.port }}; do echo "Waiting for SQL Server to start..."; sleep 5; done;']
+      containers:
+      - name: mcvdotnetapp
+        image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}"
+        imagePullPolicy: {{ .Values.app.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.app.service.targetPort | default 80 }}
+        env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-app-secrets
+              key: db-password
+        - name: ConnectionStrings__DefaultConnection
+          value: "Server={{ .Release.Name }}-{{ .Values.db.name }},{{ .Values.db.service.port }};Database=GameZone;User Id=sa;Password=$(DB_PASSWORD);TrustServerCertificate=True;Encrypt=False"
+        readinessProbe:
+          httpGet:
+            path: /
+            port: {{ .Values.app.service.targetPort | default 80 }}
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: {{ .Values.app.service.targetPort | default 80 }}
+          initialDelaySeconds: 20
+          periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-{{ .Values.app.name }}-svc
+  labels:
+    app: {{ .Values.app.name }}
+spec:
+  type: {{ .Values.app.service.type }}
+  selector:
+    app: {{ .Values.app.name }}
+  ports:
+  - port: {{ .Values.app.service.port }}
+    targetPort: {{ .Values.app.service.targetPort | default 80 }}

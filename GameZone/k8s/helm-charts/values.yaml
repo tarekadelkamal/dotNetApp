@@ -1,0 +1,28 @@
+app:
+  name: webapp
+  replicaCount: 1
+  image:
+    repository: tarek2020/dotnetapp
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 80
+
+db:
+  name: sqlserver
+  image:
+    repository: mcr.microsoft.com/mssql/server
+    tag: "2022-latest"
+  pvc:
+    storage: 1Gi
+  service:
+    port: 1433
+
+ingress:
+  enabled: true
+  className: nginx
+  host: gamezone.local
+
+secret:
+  dbPassword: "YourStrongPassword123!"
