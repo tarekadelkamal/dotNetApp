@@ -21,9 +21,8 @@ pipeline {
                 dir('GameZone') {
                    withCredentials([usernamePassword(credentialsId: 'dockerhub', passwordVariable: 'pass', usernameVariable: 'user')]) 
                     {
-                         sh "docker login -u $user -p $pass"
-                         sh "cd /var/jenkins_home/workspace/dotnetapp/Gamezone"
-                         sh "docker compose build webapp"
+                         sh 'echo $pass | docker login -u $user --password-stdin'
+                         sh 'docker compose build webapp'
                          sh "docker tag gamezone-webapp:latest tarek2020/dotnetapp:${env.BUILD_NUMBER}"
                          sh "docker push tarek2020/dotnetapp:${env.BUILD_NUMBER}"
                     } 
