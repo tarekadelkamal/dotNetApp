@@ -12,8 +12,8 @@ This project incorporates modern DevOps practices and tools to ensure seamless d
 
 - **Docker:** Containerizes the application and database for consistent environments across development and production.
 - **Docker Compose:** Orchestrates multi-container setups locally (Application + SQL Server).
-- **Jenkins:** A fully automated CI/CD pipeline (`Jenkinsfile`) that handles building, pushing Docker images to Docker Hub, and deploying the application.
-- **Kubernetes (K8s):** Provides enterprise-grade container orchestration. Manifests for deployments, services, ingress, and secrets are included in the `k8s` directory for deploying the app to a Kubernetes cluster.
+- **Jenkins:** A fully automated, parameterized CI/CD pipeline (`Jenkinsfile`) that handles building, pushing Docker images to Docker Hub, and deploying the application.
+- **Kubernetes (K8s) & Helm:** Provides enterprise-grade container orchestration. Helm charts are included in the `k8s/helm-charts` directory to package the Kubernetes manifests, manage environment configurations (`staging` vs `production`), and streamline deployments and rollbacks.
 
 ## How to Run on a Local Device
 
@@ -62,35 +62,43 @@ dotnet run
 ```
 The application will usually be accessible at `https://localhost:7111` or `http://localhost:5169` (check terminal output for exact ports).
 
-## CI/CD Pipeline (Jenkins to Kubernetes)
+## CI/CD Pipeline (Jenkins to Kubernetes via Helm)
 
-This repository includes a Jenkins pipeline (`Jenkinsfile`) that automates building the Docker image and deploying the application to a Kubernetes cluster.
+This repository includes a highly parameterized Jenkins pipeline (`Jenkinsfile`) that automates building the Docker image and orchestrating deployments using **Helm** to a Kubernetes cluster. It supports deploying to separate environments (`staging`, `production`) and rolling back to previous states seamlessly.
 
 ### Prerequisites:
 - A running **Kubernetes** cluster.
 - **Jenkins** installed and configured to connect to your Kubernetes cluster.
+- **Helm v3** installed on the Jenkins worker nodes.
 - **Docker Hub Credentials**: Configured in Jenkins with the ID `dockerhub`.
+
+### Pipeline Parameters:
+When executing the pipeline, you will be prompted with a Jenkins UI form containing:
+- **ACTION**: Choose whether to run a new `Deploy` or perform a `Rollback`.
+- **ENVIRONMENT**: Select the target environment (`staging` or `production`). Helm uses this to deploy to the respective namespace (e.g., `--namespace staging`) and load the correct environment-specific overrides (`values-staging.yaml` or `values-production.yaml`).
+- **REVISION**: If rolling back, specify the exact Helm revision number. Setting to `0` reverts to the immediately previous release.
 
 ### Pipeline Stages:
 The pipeline defined in `GameZone/Jenkinsfile` consists of the following stages:
 
-**1. Build & Push:**
-- Logs into Docker Hub using the `dockerhub` credentials.
+**1. Build & Push (Deploy Action Only):**
+- Logs into Docker Hub using the `dockerhub` credentials securely via standard input.
 - Builds the application Docker image using `docker compose build webapp`.
 - Tags the built image dynamically using the Jenkins `BUILD_NUMBER` (e.g., `tarek2020/dotnetapp:12`).
 - Pushes the versioned image to Docker Hub.
 
-**2. Deploy Infrastructure:**
-- Applies foundational Kubernetes manifests located in the `k8s/` directory.
-- Deploys database secrets (`secret.yaml`).
-- Deploys the SQL Server instance (`db-deployment.yaml`).
-- Configures the routing rules (`ingress.yaml`).
+**2. Deploy with Helm (Deploy Action Only):**
+- Utilizes the Helm chart located in `k8s/helm-charts` to manage Kubernetes resources (Deployments, Services, Ingress, Secrets, PVCs).
+- Dynamically injects the `BUILD_NUMBER` as the image tag (`--set app.image.tag=...`).
+- Applies the target environment's specific values overrides (`-f values-<environment>.yaml`).
+- Automatically creates the isolated Kubernetes namespace if it doesn't already exist (`--create-namespace`).
 
-**3. Deploy Webapp:**
-- Dynamically updates the `k8s/app-deployment.yaml` manifest to point to the newly built image tag (`tarek2020/dotnetapp:${env.BUILD_NUMBER}`).
-- Applies the updated web application deployment manifest to the Kubernetes cluster to spin up the application pods.
+**3. Rollback with Helm (Rollback Action Only):**
+- Skips the build/push steps entirely.
+- Leverages Helm's native rollback functionality (`helm rollback`) to immediately revert the targeted environment (namespace) to the specified revision, ensuring quick disaster recovery without needing to rebuild code.
 
 ### How to Run:
 1. Create a new Jenkins Pipeline Job and point it to this GitHub repository.
 2. Ensure the `Jenkinsfile` path is correctly set.
-3. Trigger a **Build Now** from your Jenkins dashboard. The pipeline will automatically handle the build, containerization, and full deployment to Kubernetes.
+3. Trigger **"Build Now"** once to parse the parameters.
+4. On subsequent runs, use **"Build with Parameters"** to select your `ACTION` and target `ENVIRONMENT` before execution.
