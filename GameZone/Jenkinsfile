@@ -1,6 +1,12 @@
 pipeline {
     agent any
 
+    parameters {
+        choice(name: 'ACTION', choices: ['Deploy', 'Rollback'], description: 'Choose whether to Deploy a new build or Rollback to a previous revision')
+        choice(name: 'ENVIRONMENT', choices: ['staging', 'production'], description: 'Target environment')
+        string(name: 'REVISION', defaultValue: '0', description: 'Revision to rollback to (0 means previous release, only used if ACTION is Rollback)')
+    }
+
     stages {
        /* stage('checkout'){
             steps{
@@ -8,6 +14,9 @@ pipeline {
             }
         }*/
         stage('build & push') {
+            when {
+                expression { params.ACTION == 'Deploy' }
+            }
             steps {
                 dir('GameZone') {
                    withCredentials([usernamePassword(credentialsId: 'dockerhub', passwordVariable: 'pass', usernameVariable: 'user')]) 
@@ -21,23 +30,33 @@ pipeline {
                 }
             }
         }
-        stage('deploy infrastructure') {
+        
+        stage('Deploy with Helm') {
+            when {
+                expression { params.ACTION == 'Deploy' }
+            }
             steps {
                dir('GameZone') { 
-                   sh 'kubectl apply -f k8s/secret.yaml'
-                   sh 'kubectl apply -f k8s/db-deployment.yaml'
-                   sh 'kubectl apply -f k8s/ingress.yaml'
+                   // Deploy using the specific environment values file
+                   sh """
+                   helm upgrade --install gamezone-${params.ENVIRONMENT} k8s/helm-charts \
+                     -f k8s/helm-charts/values-${params.ENVIRONMENT}.yaml \
+                     --set app.image.tag=${env.BUILD_NUMBER} \
+                     --namespace default \
+                     --wait
+                   """
                }
             }
         }
-        stage('deploy webapp'){
+
+        stage('Rollback with Helm') {
+            when {
+                expression { params.ACTION == 'Rollback' }
+            }
             steps {
                dir('GameZone') { 
-                   // Replace the 'latest' tag with the specific BUILD_NUMBER dynamically
-                   sh "sed -i 's|tarek2020/dotnetapp:latest|tarek2020/dotnetapp:${env.BUILD_NUMBER}|g' k8s/app-deployment.yaml"
-                   
-                   // Apply the web app deployment
-                   sh "kubectl apply -f k8s/app-deployment.yaml"
+                   // Rollback to the specified revision
+                   sh "helm rollback gamezone-${params.ENVIRONMENT} ${params.REVISION} --namespace default --wait"
                }
             }
         }
