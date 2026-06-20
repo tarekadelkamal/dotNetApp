@@ -41,7 +41,8 @@ pipeline {
                    helm upgrade --install gamezone-${params.ENVIRONMENT} k8s/helm-charts \
                      -f k8s/helm-charts/values-${params.ENVIRONMENT}.yaml \
                      --set app.image.tag=${env.BUILD_NUMBER} \
-                     --namespace default \
+                     --namespace ${params.ENVIRONMENT} \
+                     --create-namespace \
                      --wait
                    """
                }
@@ -55,7 +56,7 @@ pipeline {
             steps {
                dir('GameZone') { 
                    // Rollback to the specified revision
-                   sh "helm rollback gamezone-${params.ENVIRONMENT} ${params.REVISION} --namespace default --wait"
+                   sh "helm rollback gamezone-${params.ENVIRONMENT} ${params.REVISION} --namespace ${params.ENVIRONMENT} --wait"
                }
             }
         }
