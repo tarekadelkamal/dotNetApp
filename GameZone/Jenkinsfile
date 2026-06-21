@@ -4,6 +4,7 @@ pipeline {
     parameters {
         choice(name: 'ACTION', choices: ['Deploy', 'Rollback'], description: 'Choose whether to Deploy a new build or Rollback to a previous revision')
         choice(name: 'ENVIRONMENT', choices: ['staging', 'production'], description: 'Target environment')
+        string(name: 'IMAGE_TAG', defaultValue: '', description: 'Leave empty to build a new image. To promote, provide the image tag from staging to skip build and deploy directly.')
         string(name: 'REVISION', defaultValue: '0', description: 'Revision to rollback to (0 means previous release, only used if ACTION is Rollback)')
     }
 
@@ -15,7 +16,7 @@ pipeline {
         }*/
         stage('build & push') {
             when {
-                expression { params.ACTION == 'Deploy' }
+                expression { params.ACTION == 'Deploy' && params.IMAGE_TAG == '' }
             }
             steps {
                 dir('GameZone') {
@@ -35,12 +36,15 @@ pipeline {
                 expression { params.ACTION == 'Deploy' }
             }
             steps {
+               script {
+                   env.TARGET_TAG = params.IMAGE_TAG ?: env.BUILD_NUMBER
+               }
                dir('GameZone') { 
                    // Deploy using the specific environment values file
                    sh """
                    helm upgrade --install gamezone-${params.ENVIRONMENT} k8s/helm-charts \
                      -f k8s/helm-charts/values-${params.ENVIRONMENT}.yaml \
-                     --set app.image.tag=${env.BUILD_NUMBER} \
+                     --set app.image.tag=${env.TARGET_TAG} \
                      --namespace ${params.ENVIRONMENT} \
                      --create-namespace \
                      --wait
