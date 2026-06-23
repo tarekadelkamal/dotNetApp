@@ -2,67 +2,152 @@ pipeline {
     agent any
 
     parameters {
-        choice(name: 'ACTION', choices: ['Deploy', 'Rollback'], description: 'Choose whether to Deploy a new build or Rollback to a previous revision')
-        choice(name: 'ENVIRONMENT', choices: ['staging', 'production'], description: 'Target environment')
-        string(name: 'IMAGE_TAG', defaultValue: '', description: 'Leave empty to build a new image. To promote, provide the image tag from staging to skip build and deploy directly.')
-        string(name: 'REVISION', defaultValue: '0', description: 'Revision to rollback to (0 means previous release, only used if ACTION is Rollback)')
+        choice(
+            name: 'ACTION',
+            choices: ['Deploy', 'Rollback'],
+            description: 'Deploy a new build or Rollback to a previous Helm revision'
+        )
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['staging', 'production'],
+            description: 'Target environment'
+        )
+        string(
+            name: 'IMAGE_TAG',
+            defaultValue: '',
+            description: '''[Production only] Paste the BUILD_NUMBER from the staging run you want to promote.
+Example: if staging ran build #5, enter 5 here.
+Leave empty when deploying to staging — the tag is set automatically.'''
+        )
+        string(
+            name: 'REVISION',
+            defaultValue: '0',
+            description: 'Helm revision to rollback to (0 = previous release). Only used when ACTION = Rollback.'
+        )
     }
 
     stages {
-       /* stage('checkout'){
-            steps{
-                 git branch: 'main', url: 'https://github.com/tarekadelkamal/dotNetApp.git'
-            }
-        }*/
-        stage('build & push') {
+
+        // ── GUARD ────────────────────────────────────────────────────────────
+        // Fail fast before any work starts if the operator forgot to supply
+        // IMAGE_TAG when promoting to production.
+        // ─────────────────────────────────────────────────────────────────────
+        stage('Validate parameters') {
             when {
-                expression { params.ACTION == 'Deploy' && params.IMAGE_TAG == '' }
+                expression { params.ACTION == 'Deploy' && params.ENVIRONMENT == 'production' }
             }
             steps {
-                dir('GameZone') {
-                   withCredentials([usernamePassword(credentialsId: 'dockerhub', passwordVariable: 'pass', usernameVariable: 'user')]) 
-                    {
-                         sh 'echo $pass | docker login -u $user --password-stdin'
-                         sh 'docker compose build webapp'
-                         sh "docker tag gamezone-webapp:latest tarek2020/dotnetapp:${env.BUILD_NUMBER}"
-                         sh "docker push tarek2020/dotnetapp:${env.BUILD_NUMBER}"
-                    } 
+                script {
+                    if (params.IMAGE_TAG == '') {
+                        error("""
+╔══════════════════════════════════════════════════════════╗
+║  IMAGE_TAG is required when deploying to production.     ║
+║  Enter the BUILD_NUMBER from the staging run you tested. ║
+║  Example: if staging build #5 passed QA, enter  5        ║
+╚══════════════════════════════════════════════════════════╝
+                        """)
+                    }
+                    echo "Promoting image tag [${params.IMAGE_TAG}] to production"
                 }
             }
         }
-        
+
+        // ── BUILD & PUSH ──────────────────────────────────────────────────────
+        // Runs ONLY on staging.
+        // Pushes ONE immutable tag: the Jenkins build number (e.g. :5).
+        // No :latest tag — every image is traceable and never overwritten.
+        // ─────────────────────────────────────────────────────────────────────
+        stage('Build & Push') {
+            when {
+                expression { params.ACTION == 'Deploy' && params.ENVIRONMENT == 'staging' }
+            }
+            steps {
+                dir('GameZone') {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub', passwordVariable: 'pass', usernameVariable: 'user')]) {
+                        sh 'echo $pass | docker login -u $user --password-stdin'
+                        sh 'docker compose build webapp'
+
+                        // Tag with the immutable build number only — no :latest
+                        sh "docker tag gamezone-webapp:latest tarek2020/dotnetapp:${env.BUILD_NUMBER}"
+                        sh "docker push tarek2020/dotnetapp:${env.BUILD_NUMBER}"
+
+                        echo "Pushed image: tarek2020/dotnetapp:${env.BUILD_NUMBER}"
+                        echo "Run production deploy with IMAGE_TAG = ${env.BUILD_NUMBER}"
+                    }
+                }
+            }
+        }
+
+        // ── DEPLOY WITH HELM ──────────────────────────────────────────────────
+        // Staging:    uses the BUILD_NUMBER tag just pushed above (e.g. :5)
+        // Production: uses the IMAGE_TAG the operator passed in (e.g. :5)
+        //             → same image, no rebuild, fully immutable promotion
+        // ─────────────────────────────────────────────────────────────────────
         stage('Deploy with Helm') {
             when {
                 expression { params.ACTION == 'Deploy' }
             }
             steps {
-               script {
-                   env.TARGET_TAG = params.IMAGE_TAG ?: env.BUILD_NUMBER
-               }
-               dir('GameZone') { 
-                   // Deploy using the specific environment values file
-                   sh """
-                   helm upgrade --install gamezone-${params.ENVIRONMENT} k8s/helm-charts \
-                     -f k8s/helm-charts/values-${params.ENVIRONMENT}.yaml \
-                     --set app.image.tag=${env.TARGET_TAG} \
-                     --namespace ${params.ENVIRONMENT} \
-                     --create-namespace \
-                     --wait
-                   """
-               }
+                script {
+                    if (params.ENVIRONMENT == 'staging') {
+                        env.TARGET_TAG = env.BUILD_NUMBER
+                    } else {
+                        // IMAGE_TAG was validated non-empty in the guard stage
+                        env.TARGET_TAG = params.IMAGE_TAG
+                    }
+                    echo "Deploying tarek2020/dotnetapp:${env.TARGET_TAG} → ${params.ENVIRONMENT}"
+                }
+                dir('GameZone') {
+                    sh """
+                    helm upgrade --install gamezone-${params.ENVIRONMENT} k8s/helm-charts \\
+                      -f k8s/helm-charts/values-${params.ENVIRONMENT}.yaml \\
+                      --set app.image.tag=${env.TARGET_TAG} \\
+                      --namespace ${params.ENVIRONMENT} \\
+                      --create-namespace \\
+                      --wait
+                    """
+                }
             }
         }
 
+        // ── ROLLBACK WITH HELM ────────────────────────────────────────────────
+        // Rolls back to any previous Helm release revision.
+        // Helm keeps its own history, so the image tag is already recorded —
+        // no need to remember which tag was deployed in that revision.
+        // ─────────────────────────────────────────────────────────────────────
         stage('Rollback with Helm') {
             when {
                 expression { params.ACTION == 'Rollback' }
             }
             steps {
-               dir('GameZone') { 
-                   // Rollback to the specified revision
-                   sh "helm rollback gamezone-${params.ENVIRONMENT} ${params.REVISION} --namespace ${params.ENVIRONMENT} --wait"
-               }
+                dir('GameZone') {
+                    sh "helm rollback gamezone-${params.ENVIRONMENT} ${params.REVISION} --namespace ${params.ENVIRONMENT} --wait"
+                }
             }
+        }
+    }
+
+    // ── POST ──────────────────────────────────────────────────────────────────
+    post {
+        success {
+            script {
+                if (params.ACTION == 'Deploy' && params.ENVIRONMENT == 'staging') {
+                    echo """
+╔══════════════════════════════════════════════════════════════╗
+║  Staging deploy succeeded.                                   ║
+║  Image tag: ${env.BUILD_NUMBER}                              ║
+║                                                              ║
+║  To promote to production:                                   ║
+║    ACTION      = Deploy                                      ║
+║    ENVIRONMENT = production                                  ║
+║    IMAGE_TAG   = ${env.BUILD_NUMBER}                         ║
+╚══════════════════════════════════════════════════════════════╝
+                    """
+                }
+            }
+        }
+        always {
+            sh 'docker image prune -f || true'
         }
     }
 }
