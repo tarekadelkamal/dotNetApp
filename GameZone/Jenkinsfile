@@ -40,11 +40,11 @@ Leave empty when deploying to staging — the tag is set automatically.'''
                 script {
                     if (params.IMAGE_TAG == '') {
                         error("""
-╔══════════════════════════════════════════════════════════╗
-║  IMAGE_TAG is required when deploying to production.     ║
-║  Enter the BUILD_NUMBER from the staging run you tested. ║
-║  Example: if staging build #5 passed QA, enter  5        ║
-╚══════════════════════════════════════════════════════════╝
+                                ╔══════════════════════════════════════════════════════════╗
+                                ║  IMAGE_TAG is required when deploying to production.     ║
+                                ║  Enter the BUILD_NUMBER from the staging run you tested. ║
+                                ║  Example: if staging build #5 passed QA, enter  5        ║
+                                ╚══════════════════════════════════════════════════════════╝
                         """)
                     }
                     echo "Promoting image tag [${params.IMAGE_TAG}] to production"
@@ -133,15 +133,15 @@ Leave empty when deploying to staging — the tag is set automatically.'''
             script {
                 if (params.ACTION == 'Deploy' && params.ENVIRONMENT == 'staging') {
                     echo """
-╔══════════════════════════════════════════════════════════════╗
-║  Staging deploy succeeded.                                   ║
-║  Image tag: ${env.BUILD_NUMBER}                              ║
-║                                                              ║
-║  To promote to production:                                   ║
-║    ACTION      = Deploy                                      ║
-║    ENVIRONMENT = production                                  ║
-║    IMAGE_TAG   = ${env.BUILD_NUMBER}                         ║
-╚══════════════════════════════════════════════════════════════╝
+                        ╔══════════════════════════════════════════════════════════════╗
+                        ║  Staging deploy succeeded.                                   ║
+                        ║  Image tag: ${env.BUILD_NUMBER}                              ║
+                        ║                                                              ║
+                        ║  To promote to production:                                   ║
+                        ║    ACTION      = Deploy                                      ║
+                        ║    ENVIRONMENT = production                                  ║
+                        ║    IMAGE_TAG   = ${env.BUILD_NUMBER}                         ║
+                        ╚══════════════════════════════════════════════════════════════╝
                     """
                 }
             }
